@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EcoBot — Monitoramento Ambiental</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-deep:      #050d14;
+      --bg-mid:       #091a24;
+      --green-neon:   #00ff88;
+      --green-mid:    #00c96a;
+      --green-border: rgba(0, 255, 136, 0.45);
+      --glass-bg:     rgba(255, 255, 255, 0.045);
+      --glass-border: rgba(255, 255, 255, 0.10);
+      --text-primary: #e8f5ee;
+      --text-muted:   #6b8f7a;
+      --font-display: 'Exo 2', sans-serif;
+      --font-mono:    'Space Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      min-height: 100vh;
+      background-color: var(--bg-deep);
+      font-family: var(--font-display);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 1.25rem 3.5rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* ── Background grid ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridDrift 20s linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+    @keyframes gridDrift {
+      from { background-position: 0 0; }
+      to   { background-position: 40px 40px; }
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 560px; height: 560px;
+      background: radial-gradient(circle, rgba(0,255,136,.09) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Particles ── */
+    .particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      background: var(--green-neon);
+      opacity: 0;
+      animation: floatUp linear infinite;
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+      10%  { opacity: .5; }
+      90%  { opacity: .15; }
+      100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+    }
+
+    /* ── Card ── */
+    .card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 430px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Profile ── */
+    .profile-wrap {
+      position: relative;
+      margin-bottom: 1.4rem;
+      animation: fadeDown .6s ease both;
+    }
+    .profile-ring {
+      width: 116px; height: 116px;
+      border-radius: 50%;
+      padding: 3px;
+      background: conic-gradient(var(--green-neon) 0deg, var(--green-mid) 120deg, transparent 200deg, var(--green-neon) 360deg);
+      animation: spinRing 6s linear infinite;
+      box-shadow: 0 0 30px rgba(0,255,136,.55);
+    }
+    @keyframes spinRing { to { transform: rotate(360deg); } }
+    .profile-ring img {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      display: block;
+      object-fit: cover;
+      background: var(--bg-mid);
+      animation: counterSpin 6s linear infinite;
+    }
+    @keyframes counterSpin { to { transform: rotate(-360deg); } }
+    .profile-wrap::after {
+      content: '';
+      position: absolute;
+      bottom: 7px; right: 7px;
+      width: 14px; height: 14px;
+      background: var(--green-neon);
+      border: 2.5px solid var(--bg-deep);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--green-neon);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 8px var(--green-neon); }
+      50%       { transform: scale(1.3); box-shadow: 0 0 20px var(--green-neon); }
+    }
+
+    /* ── Headings ── */
+    .title {
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      color: var(--green-neon);
+      text-shadow: 0 0 18px rgba(0,255,136,.6), 0 0 42px rgba(0,255,136,.25);
+      animation: fadeDown .7s .1s ease both;
+      margin-bottom: .35rem;
+    }
+    .bio {
+      font-size: .88rem;
+      font-weight: 300;
+      color: #9dc9ae;
+      text-align: center;
+      letter-spacing: .03em;
+      line-height: 1.55;
+      animation: fadeDown .7s .2s ease both;
+      margin-bottom: .6rem;
+    }
+
+    /* ── Stats bar ── */
+    .stats {
+      display: flex;
+      gap: 1.4rem;
+      margin: .9rem 0 1.6rem;
+      animation: fadeDown .7s .3s ease both;
+    }
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .15rem;
+    }
+    .stat-val {
+      font-family: var(--font-mono);
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--green-neon);
+    }
+    .stat-label {
+      font-size: .65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .stat-dot {
+      width: 3px; height: 3px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      align-self: center;
+      margin-top: .4rem;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--green-border), transparent);
+      margin-bottom: 1.8rem;
+      animation: fadeIn .6s .35s ease both;
+    }
+
+    /* ── Section label ── */
+    .section-label {
+      align-self: flex-start;
+      font-family: var(--font-mono);
+      font-size: .62rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: .7rem;
+      padding-left: .2rem;
+      animation: fadeIn .6s .4s ease both;
+    }
+
+    /* ── Links ── */
+    .links {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: .8rem;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: .85rem;
+      padding: .88rem 1.2rem;
+      border-radius: 14px;
+      text-decoration: none;
+      color: var(--text-primary);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: background .25s, border-color .25s, transform .2s, box-shadow .25s;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp .5s ease both;
+    }
+    .btn:nth-child(1) { animation-delay: .4s; }
+    .btn:nth-child(2) { animation-delay: .5s; }
+    .btn:nth-child(3) { animation-delay: .6s; }
+    .btn:nth-child(4) { animation-delay: .7s; }
+    .btn:nth-child(5) { animation-delay: .8s; }
+
+    /* shimmer */
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0,255,136,.10), transparent);
+      transition: left .4s ease;
+    }
+    .btn:hover::before { left: 160%; }
+
+    .btn:hover, .btn:focus-visible {
+      background: rgba(0,255,136,.09);
+      border-color: var(--green-border);
+      transform: translateY(-3px) scale(1.012);
+      box-shadow: 0 8px 32px rgba(0,255,136,.18), inset 0 0 0 1px rgba(0,255,136,.18);
+      outline: none;
+    }
+    .btn:active { transform: translateY(0) scale(.98); }
+
+    /* NEW: "destaque" badge on app button */
+    .badge {
+      position: absolute;
+      top: -1px; right: 12px;
+      background: var(--green-neon);
+      color: var(--bg-deep);
+      font-family: var(--font-mono);
+      font-size: .55rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      padding: .18rem .5rem;
+      border-radius: 0 0 6px 6px;
+      text-transform: uppercase;
+    }
+
+    /* Icon box */
+    .btn-icon {
+      flex-shrink: 0;
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      background: rgba(0,255,136,.10);
+      border: 1px solid rgba(0,255,136,.20);
+      transition: background .25s, box-shadow .25s;
+    }
+    .btn:hover .btn-icon { background: rgba(0,255,136,.22); box-shadow: 0 0 14px rgba(0,255,136,.35); }
+
+    .btn-icon.green  { color: var(--green-neon); }
+    .btn-icon.insta  { color: #e1306c; background: rgba(225,48,108,.10); border-color: rgba(225,48,108,.25); }
+    .btn-icon.yt     { color: #ff2020; background: rgba(255,32,32,.10);  border-color: rgba(255,32,32,.25); }
+    .btn-icon.tiktok { color: #69c9d0; background: rgba(105,201,208,.10); border-color: rgba(105,201,208,.25); }
+
+    .btn:hover .btn-icon.insta  { box-shadow: 0 0 14px rgba(225,48,108,.45); }
+    .btn:hover .btn-icon.yt     { box-shadow: 0 0 14px rgba(255,32,32,.45); }
+    .btn:hover .btn-icon.tiktok { box-shadow: 0 0 14px rgba(105,201,208,.45); }
+
+    .btn-text { flex: 1; }
+    .btn-label { display: block; font-weight: 600; font-size: .92rem; letter-spacing: .02em; }
+    .btn-sub   { display: block; font-size: .72rem; color: var(--text-muted); margin-top: .1rem; font-weight: 300; }
+
+    .btn-arrow { font-size: .72rem; color: var(--text-muted); transition: transform .2s, color .2s; }
+    .btn:hover .btn-arrow { transform: translateX(4px); color: var(--green-neon); }
+
+    /* ── Tech tags ── */
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .45rem;
+      justify-content: center;
+      margin-top: 2rem;
+      animation: fadeIn .8s .9s ease both;
+    }
+    .tag {
+      font-family: var(--font-mono);
+      font-size: .6rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: .28rem .7rem;
+      border-radius: 999px;
+      border: 1px solid rgba(0,255,136,.2);
+      color: var(--text-muted);
+      background: rgba(0,255,136,.04);
+    }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 2.2rem;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: .65rem;
+      color: var(--text-muted);
+      letter-spacing: .07em;
+      animation: fadeIn .8s 1.1s ease both;
+    }
+    footer span { color: var(--green-neon); opacity: .75; }
+
+    /* ── Animations ── */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @media (min-width: 480px) {
+      .title { font-size: 2.4rem; }
+      .bio   { font-size: .92rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="particles" id="particles"></div>
+
+  <div class="card">
+
+    <!-- Profile -->
+    <div class="profile-wrap">
+      <div class="profile-ring">
+        <img src="https://i.ibb.co/xSmG5wTD/Design-sem-nome-6.png" alt="EcoBot Logo" />
+      </div>
+    </div>
+
+    <h1 class="title">EcoBot</h1>
+    <p class="bio">Monitoramento Ambiental Inteligente e Acessível 🍃💻</p>
+
+    <!-- Stats bar -->
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-val">IoT</span>
+        <span class="stat-label">Sensores</span>
+      </div>
+      <div class="stat-dot"></div>
+      <div class="stat">
+        <span class="stat-val">Arduino</span>
+        <span class="stat-label">Hardware</span>
+      </div>
+      <div class="stat-dot"></div>
+      <div class="stat">
+        <span class="stat-val">Real-time</span>
+        <span class="stat-label">Dashboard</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <span class="section-label">// acesse agora</span>
+
+    <!-- Links -->
+    <nav class="links" aria-label="Links do EcoBot">
+
+      <a class="btn" href="https://web-production-7eff7.up.railway.app/" target="_blank" rel="noopener">
+        <span class="btn-icon green"><i class="fas fa-satellite-dish"></i></span>
+        <span class="btn-text">
+          <span class="btn-label">Acesse nosso Site</span>
+          <span class="btn-sub">Dashboard IoT em tempo real</span>
+        </span>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </a>
+
+      <a class="btn" href="https://drive.google.com/file/d/1brC7cWHiqz8s7zRq6TanXiNOnt2JMbAY/view?usp=sharing" target="_blank" rel="noopener">
+        <span class="badge">Grátis</span>
+        <span class="btn-icon green"><i class="fab fa-android"></i></span>
+        <span class="btn-text">
+          <span class="btn-label">Baixe nosso App</span>
+          <span class="btn-sub">Android · APK direto</span>
+        </span>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </a>
+
+      <a class="btn" href="https://www.instagram.com/ecobot.ce" target="_blank" rel="noopener">
+        <span class="btn-icon insta"><i class="fab fa-instagram"></i></span>
+        <span class="btn-text">
+          <span class="btn-label">Siga no Instagram</span>
+          <span class="btn-sub">@ecobot.ce</span>
+        </span>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </a>
+
+      <a class="btn" href="https://www.youtube.com/@Pjt.Ecobot" target="_blank" rel="noopener">
+        <span class="btn-icon yt"><i class="fab fa-youtube"></i></span>
+        <span class="btn-text">
+          <span class="btn-label">Inscreva-se no YouTube</span>
+          <span class="btn-sub">@Pjt.Ecobot</span>
+        </span>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </a>
+
+      <a class="btn" href="https://www.tiktok.com/@ecobot.ce" target="_blank" rel="noopener">
+        <span class="btn-icon tiktok"><i class="fab fa-tiktok"></i></span>
+        <span class="btn-text">
+          <span class="btn-label">Siga no TikTok</span>
+          <span class="btn-sub">@ecobot.ce</span>
+        </span>
+        <i class="fas fa-chevron-right btn-arrow"></i>
+      </a>
+
+    </nav>
+
+    <!-- Tech tags -->
+    <div class="tags">
+      <span class="tag"># Arduino</span>
+      <span class="tag"># IoT</span>
+      <span class="tag"># Sustentabilidade</span>
+      <span class="tag"># Ceará</span>
+      <span class="tag"># Open Source</span>
+    </div>
+
+    <footer>
+      Desenvolvido pela <span>Equipe EcoBot</span> &copy; 2026
+    </footer>
+
+  </div>
+
+  <script>
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement('div');
+      p.classList.add('particle');
+      const size = Math.random() * 3 + 1.5;
+      p.style.cssText = `
+        width:${size}px; height:${size}px;
+        left:${Math.random()*100}%;
+        animation-duration:${Math.random()*14+10}s;
+        animation-delay:-${Math.random()*20}s;
+        filter:blur(${Math.random()>.6?1:0}px);
+      `;
+      container.appendChild(p);
+    }
+  </script>
+
+</body>
+</html>
